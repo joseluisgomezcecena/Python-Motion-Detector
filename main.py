@@ -1,3 +1,4 @@
+import glob
 import cv2
 import time  # for delay
 from emailsender import send_email  # for sending email when motion is detected.
@@ -12,9 +13,6 @@ count = 1  # to store the number of saved files.
 while True:
     status = 0  # no motion detected.
     check, frame = video.read()
-
-    cv2.imwrite(f"images/image-{count}.jpg", frame)  # saving the captured frame.
-    count += 1
 
     gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # converting to gray scale.
     gray_frame_blur = cv2.GaussianBlur(gray_frame, (21, 21), 0)  # blurring the image.
@@ -44,11 +42,18 @@ while True:
         if rectangle.any():
             status = 1  # motion detected.
 
+            cv2.imwrite(f"images/image-{count}.jpg", frame)  # saving the captured frame.
+            count += 1
+
+            all_images = glob.glob("images/*.png")  # getting all the saved images.
+            index = int(len(all_images)/2)  # getting the index of the last saved image.
+            image_with_object = all_images[index]  # getting the last saved image.
+
     status_list.append(status)
     status_list = status_list[-2:]
 
     if status_list[0] == 1 and status_list[1] == 0:
-        send_email()
+        send_email(image_with_object)
 
     print(status_list)
 
@@ -59,3 +64,4 @@ while True:
         break
 
 video.release()
+#yrepuapenhbscxvn
