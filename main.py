@@ -3,6 +3,7 @@ import glob
 import cv2
 import time  # for delay
 from emailsender import send_email  # for sending email when motion is detected.
+from threading import Thread  # for sending email asynchronously.
 
 video = cv2.VideoCapture(0)  # 0 for webcam, 1 for external camera.
 time.sleep(1)  # 1 second delay
@@ -13,9 +14,11 @@ count = 1  # to store the number of saved files.
 
 
 def clean_folder():
+    print("Cleaning folder...")
     images = glob.glob('images/*.png')
     for image in images:
         os.remove(image)
+    print("Folder cleaned.")
 
 
 while True:
@@ -49,20 +52,33 @@ while True:
         # sending email when motion is detected.
         if rectangle.any():
             status = 1  # motion detected.
-
             cv2.imwrite(f"images/image-{count}.jpg", frame)  # saving the captured frame.
-            count += 1
+            count = count + 1  # incrementing the count.
 
             all_images = glob.glob("images/*.png")  # getting all the saved images.
-            index = int(len(all_images)/2)  # getting the index of the last saved image.
-            image_with_object = all_images[index]  # getting the last saved image.
+
+            if len(all_images) > 0:
+                index = int(len(all_images)/2)  # getting the index of the last saved image.
+                image_with_object = all_images[index]  # getting the last saved image.
+            else:
+                image_with_object = "images/image-1.jpg"
 
     status_list.append(status)
     status_list = status_list[-2:]
 
     if status_list[0] == 1 and status_list[1] == 0:
-        send_email(image_with_object)
-        clean_folder()  # cleaning the folder after sending the email.
+        # sending email asynchronously.
+        email_thread = Thread(target=send_email, args=(image_with_object, ))  # creating a thread.
+        email_thread.daemon = True  # making the thread daemon.
+
+        clean_folder_thread = Thread(target=clean_folder)  # creating a thread.
+        clean_folder_thread.daemon = True  # making the thread daemon.
+
+        email_thread.start()  # starting the thread.
+
+
+        #send_email(image_with_object)
+        #clean_folder()  # cleaning the folder after sending the email.
 
     print(status_list)
 
@@ -73,4 +89,5 @@ while True:
         break
 
 video.release()
+clean_folder_thread.start()  # starting the thread.
 #yrepuapenhbscxvn
